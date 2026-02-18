@@ -104,9 +104,10 @@ All topics conform to a shared interface so the game engine is data-source agnos
 
 ## Deployment
 
-- Intended to be published as a **GitLab Pages** site
-- Single `index.html` in the repo root (or `public/` folder depending on CI config)
-- A `.gitlab-ci.yml` should be included to deploy automatically on push
+- Published as a **GitHub Pages** site
+- `muncher/index.html` is the complete game (single file, no build step)
+- `.github/workflows/pages.yml` deploys the `muncher/` folder to GitHub Pages on every push to `main`
+- The live URL will be `https://<username>.github.io/<repo>/` once Pages is enabled in the repo settings
 
 ---
 
@@ -121,9 +122,9 @@ All topics conform to a shared interface so the game engine is data-source agnos
 
 ---
 
-## Open Questions (to resolve before/during v1)
+## v1 Decisions (resolved)
 
-1. Should keyboard arrow keys also be supported for navigation? (Useful for desktop, but kids may prefer tap)
-2. What specific topics should ship in v1?
-3. Is this English-only for now?
-4. GitLab namespace / project name for Pages URL?
+1. **Keyboard navigation:** Arrow keys to move + Enter/Space to eat ✅
+2. **v1 Topics:** Multiples of 2–9 (math), Coastal Countries vs Landlocked (geography) ✅
+3. **Language:** English only for now; multilingual planned for later ✅
+4. **Hosting:** GitHub Pages (not GitLab) ✅
