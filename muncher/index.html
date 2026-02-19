@@ -35,7 +35,7 @@
     #topbar {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: center;
       margin-bottom: 8px;
@@ -43,11 +43,11 @@
       max-width: 600px;
     }
 
-    #topicSelect {
+    .topic-select {
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 700;
-      padding: 7px 14px;
+      padding: 7px 12px;
       border: 3px solid #7c3aed;
       border-radius: 14px;
       background: white;
@@ -55,9 +55,9 @@
       cursor: pointer;
       outline: none;
       flex: 1;
-      min-width: 170px;
+      min-width: 140px;
     }
-    #topicSelect:focus { border-color: #4338ca; }
+    .topic-select:focus { border-color: #4338ca; }
 
     #lives {
       font-size: 1.35rem;
@@ -112,9 +112,10 @@
       font-weight: 800;
       color: #3730a3;
       cursor: pointer;
-      word-break: break-word;
+      /* FIX: word-break:normal + hyphens:none prevent orphaned single letters */
+      word-break: normal;
       overflow-wrap: break-word;
-      hyphens: auto;
+      hyphens: none;
       text-align: center;
       padding: 4px 3px;
       line-height: 1.15;
@@ -255,12 +256,13 @@
 <h1>🌟 Muncher!</h1>
 
 <div id="topbar">
-  <select id="topicSelect" onchange="onTopicChange()"></select>
+  <select id="categorySelect" class="topic-select" onchange="onCategoryChange()"></select>
+  <select id="topicSelect"    class="topic-select" onchange="onTopicChange()"></select>
   <div id="lives"></div>
 </div>
 
 <div id="scorebar">
-  <span>🍽️ <span id="eatCount">0</span> / 20</span>
+  <span>🍽️ <span id="eatCount">0</span> / <span id="eatTotal">20</span></span>
   <span>📋 Level <span id="levelNum">1</span></span>
 </div>
 
@@ -303,26 +305,27 @@ function pickN(arr, n) {
 }
 
 // ─────────────────────────────────────────
-//  TOPIC: Multiples of N
+//  TOPIC: Multiples of N  (with capped max)
 // ─────────────────────────────────────────
 
-function multiplesTopic(n) {
-  // Ensure at least 20 correct answers: go up to n * 25
+function multiplesTopic(n, maxVal) {
   const correct   = [];
   const incorrect = [];
-  const max = n * 25;
-  for (let i = 1; i <= max; i++) {
+  for (let i = 1; i <= maxVal; i++) {
     (i % n === 0 ? correct : incorrect).push(i);
   }
   return {
-    id:        `mult${n}`,
+    id:        `mult${n}_${maxVal}`,
     label:     `Multiples of ${n}`,
     icon:      '🔢',
     challenge: `🍽️  Eat all multiples of ${n}!`,
     generate(nc, ni) {
+      // Use however many correct items are available (may be fewer than nc)
+      const avail      = Math.min(nc, correct.length);
+      const fillWrong  = (nc + ni) - avail;
       return shuffle([
-        ...pickN(correct,   nc).map(v => ({ label: String(v), isCorrect: true  })),
-        ...pickN(incorrect, ni).map(v => ({ label: String(v), isCorrect: false })),
+        ...pickN(correct,   avail)     .map(v => ({ label: String(v), isCorrect: true  })),
+        ...pickN(incorrect, fillWrong) .map(v => ({ label: String(v), isCorrect: false })),
       ]);
     }
   };
@@ -355,7 +358,7 @@ const LANDLOCKED = [
   'Zambia','Burkina Faso','Malawi','Eswatini','Kosovo',
   'North Macedonia','Armenia','Belarus','South Sudan',
   'Tajikistan','Kyrgyzstan','Turkmenistan','Andorra','Liechtenstein',
-  'Bhutan','Burundi','Central African Republic','Niger','San Marino',
+  'Bhutan','Burundi','Central African Republic','San Marino',
 ];
 
 const coastalTopic = {
@@ -364,37 +367,172 @@ const coastalTopic = {
   icon:      '🌊',
   challenge: '🌊  Eat the coastal countries!',
   generate(nc, ni) {
+    const avail     = Math.min(nc, COASTAL.length);
+    const fillWrong = (nc + ni) - avail;
     return shuffle([
-      ...pickN(COASTAL,    nc).map(v => ({ label: v, isCorrect: true  })),
-      ...pickN(LANDLOCKED, ni).map(v => ({ label: v, isCorrect: false })),
+      ...pickN(COASTAL,    avail)     .map(v => ({ label: v, isCorrect: true  })),
+      ...pickN(LANDLOCKED, fillWrong) .map(v => ({ label: v, isCorrect: false })),
     ]);
   }
 };
 
 // ─────────────────────────────────────────
-//  TOPIC REGISTRY
+//  GENERIC LIST TOPIC FACTORY
 // ─────────────────────────────────────────
 
-const TOPICS = [
-  multiplesTopic(2),
-  multiplesTopic(3),
-  multiplesTopic(4),
-  multiplesTopic(5),
-  multiplesTopic(6),
-  multiplesTopic(7),
-  multiplesTopic(8),
-  multiplesTopic(9),
-  coastalTopic,
+function listTopic({ id, label, icon, challenge, correct, incorrect }) {
+  return {
+    id, label, icon, challenge,
+    generate(nc, ni) {
+      const avail      = Math.min(nc, correct.length);
+      const fillWrong  = (nc + ni) - avail;
+      const actualWrong = Math.min(fillWrong, incorrect.length);
+      const actualRight = (nc + ni) - actualWrong;
+      return shuffle([
+        ...pickN(correct,   actualRight) .map(v => ({ label: v, isCorrect: true  })),
+        ...pickN(incorrect, actualWrong) .map(v => ({ label: v, isCorrect: false })),
+      ]);
+    }
+  };
+}
+
+// ─────────────────────────────────────────
+//  TOPIC: TV Shows
+// ─────────────────────────────────────────
+
+const gilmoreGirlsTopic = listTopic({
+  id:        'gg',
+  label:     'Gilmore Girls',
+  icon:      '☕',
+  challenge: '☕  Eat the Gilmore Girls characters!',
+  correct: [
+    'Lorelai','Rory','Luke','Emily','Richard','Sookie','Lane',
+    'Kirk','Michel','Paris','Logan','Dean','Jess','Jackson',
+    'Babette','Taylor','Miss Patty','Zack','April','Mrs. Kim',
+  ],
+  incorrect: [
+    // Friends
+    'Phoebe','Monica','Rachel','Chandler','Joey','Ross',
+    // Gossip Girl
+    'Blair','Serena','Chuck','Nate',
+    // Sex and the City
+    'Carrie','Charlotte',
+    // Grey's Anatomy
+    'Meredith','Cristina','Izzie','Alex',
+  ],
+});
+
+const simpsonsTopic = listTopic({
+  id:        'simpsons',
+  label:     'The Simpsons',
+  icon:      '🍩',
+  challenge: '🍩  Eat the Simpsons characters!',
+  correct: [
+    'Homer','Marge','Bart','Lisa','Maggie','Burns','Smithers',
+    'Ned','Milhouse','Nelson','Skinner','Patty','Selma',
+    'Wiggum','Apu','Krusty','Sideshow Bob','Moe','Lenny','Carl',
+  ],
+  incorrect: [
+    // Family Guy
+    'Peter','Lois','Meg','Chris','Stewie','Brian',
+    // Bob's Burgers
+    'Bob','Linda','Tina','Gene','Louise',
+    // Futurama
+    'Fry','Leela','Bender','Zoidberg',
+    // King of the Hill
+    'Hank','Bobby','Peggy','Dale',
+  ],
+});
+
+// ─────────────────────────────────────────
+//  TOPIC: Languages — Regular vs Irregular Verbs
+// ─────────────────────────────────────────
+
+const REGULAR_VERBS = [
+  'walk','talk','jump','play','work','cook','clean','help',
+  'watch','listen','open','close','start','finish','call',
+  'push','pull','smile','dance','move','love','use','like',
+  'want','need','learn','visit','travel','enjoy','change',
+  'live','ask','answer','bake','fix','wash','lock','paint',
+  'pick','plan','save','rent','park','print','wrap','climb',
 ];
 
-// Populate <select>
-const $select = document.getElementById('topicSelect');
-TOPICS.forEach((t, i) => {
-  const opt = document.createElement('option');
-  opt.value       = i;
-  opt.textContent = `${t.icon}  ${t.label}`;
-  $select.appendChild(opt);
+const IRREGULAR_VERBS = [
+  'be','have','do','go','get','make','know','take','see','come',
+  'think','give','find','tell','leave','put','bring','keep',
+  'write','stand','hear','run','sit','teach','catch','feel',
+  'fall','grow','drink','eat','fly','buy','break','choose',
+  'cut','drive','say','win','build','meet','read','send',
+  'shoot','sleep','speak','spend','steal','swim','throw','wear',
+];
+
+const regularVerbsTopic = listTopic({
+  id:        'regular-verbs',
+  label:     'Regular Verbs',
+  icon:      '📝',
+  challenge: '📝  Eat the regular verbs! (add -ed for past tense)',
+  correct:   REGULAR_VERBS,
+  incorrect: IRREGULAR_VERBS,
 });
+
+const irregularVerbsTopic = listTopic({
+  id:        'irregular-verbs',
+  label:     'Irregular Verbs',
+  icon:      '⚡',
+  challenge: '⚡  Eat the irregular verbs! (past tense is NOT -ed)',
+  correct:   IRREGULAR_VERBS,
+  incorrect: REGULAR_VERBS,
+});
+
+// ─────────────────────────────────────────
+//  CATEGORY & TOPIC REGISTRY
+// ─────────────────────────────────────────
+
+const CATEGORIES = [
+  { id: 'simple-math',    label: 'Simple Math',    icon: '🔢' },
+  { id: 'difficult-math', label: 'Difficult Math',  icon: '🧮' },
+  { id: 'geo',            label: 'Geography',       icon: '🌍' },
+  { id: 'tv',             label: 'TV Shows',        icon: '📺' },
+  { id: 'lang',           label: 'Languages',       icon: '🗣️' },
+];
+
+// Simple math: n × 10  (times-table range, kid-friendly)
+// Difficult math: n × 20  (larger numbers, more challenge)
+const TOPICS_BY_CAT = {
+  'simple-math':    [2,3,4,5,6,7,8,9].map(n => multiplesTopic(n, n * 10)),
+  'difficult-math': [2,3,4,5,6,7,8,9].map(n => multiplesTopic(n, n * 20)),
+  'geo':            [coastalTopic],
+  'tv':             [gilmoreGirlsTopic, simpsonsTopic],
+  'lang':           [regularVerbsTopic, irregularVerbsTopic],
+};
+
+// ─────────────────────────────────────────
+//  POPULATE DROPDOWNS
+// ─────────────────────────────────────────
+
+const $catSelect   = document.getElementById('categorySelect');
+const $topicSelect = document.getElementById('topicSelect');
+
+function initCategorySelect() {
+  $catSelect.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value       = cat.id;
+    opt.textContent = `${cat.icon}  ${cat.label}`;
+    $catSelect.appendChild(opt);
+  });
+}
+
+function initTopicSelect(catId) {
+  $topicSelect.innerHTML = '';
+  TOPICS_BY_CAT[catId].forEach((t, i) => {
+    const opt = document.createElement('option');
+    opt.value       = i;
+    opt.textContent = `${t.icon}  ${t.label}`;
+    $topicSelect.appendChild(opt);
+  });
+  $topicSelect.value = 0;
+}
 
 // ─────────────────────────────────────────
 //  CONSTANTS
@@ -413,16 +551,18 @@ const INIT_LIVES  = 5;
 // ─────────────────────────────────────────
 
 let G = {
-  lives:    INIT_LIVES,
-  level:    1,
-  topicIdx: 0,
-  grid:     [],   // [{label, isCorrect, eaten, row, col}]
-  mRow:     0,
-  mCol:     0,
-  eaten:    0,    // correct cells eaten this level
-  gameOver: false,
-  locked:   false, // true during wrong-eat animation
-  lastTap:  { row: -1, col: -1, t: 0 }, // double-tap tracking
+  lives:     INIT_LIVES,
+  level:     1,
+  catId:     'simple-math',
+  topicIdx:  0,
+  grid:      [],   // [{label, isCorrect, eaten, row, col}]
+  mRow:      0,
+  mCol:      0,
+  eaten:     0,    // correct cells eaten this level
+  nCorrect:  N_CORRECT, // actual correct cells this board (may vary by topic)
+  gameOver:  false,
+  locked:    false, // true during wrong-eat animation
+  lastClick: { row: -1, col: -1, t: 0 }, // double-click/tap tracking (shared)
 };
 
 // ─────────────────────────────────────────
@@ -430,7 +570,8 @@ let G = {
 // ─────────────────────────────────────────
 
 function generateBoard() {
-  const cells = TOPICS[G.topicIdx].generate(N_CORRECT, N_INCORRECT);
+  const topic = TOPICS_BY_CAT[G.catId][G.topicIdx];
+  const cells = topic.generate(N_CORRECT, N_INCORRECT);
   G.grid = cells.map((c, i) => ({
     label:     c.label,
     isCorrect: c.isCorrect,
@@ -438,6 +579,7 @@ function generateBoard() {
     row:       (i / COLS) | 0,
     col:       i % COLS,
   }));
+  G.nCorrect = G.grid.filter(c => c.isCorrect).length;
   G.mRow  = 0;
   G.mCol  = 0;
   G.eaten = 0;
@@ -452,9 +594,10 @@ function cellFontSize(label) {
   if (len <=  2) return '1.25rem';
   if (len <=  3) return '1.1rem';
   if (len <=  5) return '0.95rem';
-  if (len <=  8) return '0.82rem';
-  if (len <= 12) return '0.7rem';
-  return '0.6rem';
+  if (len <=  7) return '0.82rem';
+  if (len <= 10) return '0.66rem';
+  if (len <= 14) return '0.56rem';
+  return '0.48rem';
 }
 
 function cellIdx(row, col) { return row * COLS + col; }
@@ -470,11 +613,13 @@ function renderLives() {
 
 function renderScorebar() {
   document.getElementById('eatCount').textContent = G.eaten;
+  document.getElementById('eatTotal').textContent = G.nCorrect;
   document.getElementById('levelNum').textContent  = G.level;
 }
 
 function renderChallenge() {
-  document.getElementById('challenge').textContent = TOPICS[G.topicIdx].challenge;
+  document.getElementById('challenge').textContent =
+    TOPICS_BY_CAT[G.catId][G.topicIdx].challenge;
 }
 
 function makeEl(tag, className) {
@@ -496,7 +641,6 @@ function renderGrid() {
     if (cell.eaten) {
       div.classList.add('eaten-cell');
       if (isHere) {
-        // Muncher standing on an already-eaten cell
         const icon = makeEl('span', 'muncher-icon');
         icon.textContent = '😋';
         div.appendChild(icon);
@@ -506,7 +650,6 @@ function renderGrid() {
         div.appendChild(chk);
       }
     } else {
-      // Cell not yet eaten
       div.style.fontSize = cellFontSize(cell.label);
 
       if (isHere) {
@@ -521,25 +664,26 @@ function renderGrid() {
       div.appendChild(lbl);
     }
 
-    // ── Mouse events (desktop) ──
-    div.addEventListener('click', () => handleClick(cell.row, cell.col));
-    div.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      handleEat(cell.row, cell.col);
+    // ── Mouse events ──
+    // FIX: detect double-click manually (same approach as double-tap)
+    // so re-rendering the grid between clicks doesn't break dblclick detection.
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleClick(cell.row, cell.col);
     });
 
-    // ── Touch events (mobile) ──
+    // ── Touch events ──
     // preventDefault stops synthesised mouse events so we don't double-fire.
     div.addEventListener('touchend', (e) => {
       e.preventDefault();
       const now = Date.now();
-      const { row: lr, col: lc, t: lt } = G.lastTap;
-      if (lr === cell.row && lc === cell.col && now - lt < 450) {
-        G.lastTap = { row: -1, col: -1, t: 0 };
+      const { row: lr, col: lc, t: lt } = G.lastClick;
+      if (lr === cell.row && lc === cell.col && now - lt < 400) {
+        G.lastClick = { row: -1, col: -1, t: 0 };
         handleEat(cell.row, cell.col);
       } else {
-        G.lastTap = { row: cell.row, col: cell.col, t: now };
-        handleClick(cell.row, cell.col);
+        G.lastClick = { row: cell.row, col: cell.col, t: now };
+        handleMove(cell.row, cell.col);
       }
     });
 
@@ -558,7 +702,23 @@ function render() {
 //  ACTIONS
 // ─────────────────────────────────────────
 
+// handleClick: detects double-click by timing; single click = move, double = eat
 function handleClick(row, col) {
+  if (G.gameOver || G.locked) return;
+  const now = Date.now();
+  const { row: lr, col: lc, t: lt } = G.lastClick;
+  if (lr === row && lc === col && now - lt < 400) {
+    // Second click on same cell within 400 ms → eat
+    G.lastClick = { row: -1, col: -1, t: 0 };
+    handleEat(row, col);
+    return;
+  }
+  // First click → move
+  G.lastClick = { row, col, t: now };
+  handleMove(row, col);
+}
+
+function handleMove(row, col) {
   if (G.gameOver || G.locked) return;
   G.mRow = row;
   G.mCol = col;
@@ -573,11 +733,14 @@ function handleEat(row, col) {
   G.mCol = col;
 
   const cell = G.grid[cellIdx(row, col)];
-  if (cell.eaten) return; // nothing left to eat here
+  if (cell.eaten) return;
 
   if (cell.isCorrect) {
     cell.eaten = true;
     G.eaten++;
+
+    // FIX: update scorebar immediately so counter doesn't stay at 0
+    renderScorebar();
 
     // Brief pop animation on the cell
     const el = document.querySelector(`[data-idx="${cellIdx(row, col)}"]`);
@@ -586,7 +749,7 @@ function handleEat(row, col) {
       el.addEventListener('animationend', () => el.classList.remove('correct-pop'), { once: true });
     }
 
-    if (G.eaten >= N_CORRECT) {
+    if (G.eaten >= G.nCorrect) {
       setTimeout(levelComplete, 280);
     } else {
       renderGrid();
@@ -660,16 +823,24 @@ function gameOver() {
 
 function resetGame() {
   hideOverlay();
-  G.lives    = INIT_LIVES;
-  G.level    = 1;
-  G.gameOver = false;
-  G.locked   = false;
+  G.lives     = INIT_LIVES;
+  G.level     = 1;
+  G.gameOver  = false;
+  G.locked    = false;
+  G.lastClick = { row: -1, col: -1, t: 0 };
   generateBoard();
   render();
 }
 
+function onCategoryChange() {
+  G.catId    = $catSelect.value;
+  G.topicIdx = 0;
+  initTopicSelect(G.catId);
+  resetGame();
+}
+
 function onTopicChange() {
-  G.topicIdx = parseInt($select.value, 10);
+  G.topicIdx = parseInt($topicSelect.value, 10);
   resetGame();
 }
 
@@ -696,13 +867,15 @@ document.addEventListener('keydown', (e) => {
   }
 
   e.preventDefault();
-  handleClick(r, c);
+  handleMove(r, c);
 });
 
 // ─────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────
 
+initCategorySelect();
+initTopicSelect(G.catId);
 generateBoard();
 render();
 </script>
