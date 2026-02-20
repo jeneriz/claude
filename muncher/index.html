@@ -485,6 +485,115 @@ const irregularVerbsTopic = listTopic({
 });
 
 // ─────────────────────────────────────────
+//  TOPIC: Spanish Rivers — Geography
+//
+//  Main rivers (reach the sea directly):
+//   • Cantábrico: Bidasoa, Oria, Urola, Deba, Nervión, Navia, Nalón, Sella, Pas, Nansa, Eo
+//   • Atlántico:  Miño, Duero, Tajo, Guadiana, Guadalquivir, Odiel, Tinto, Guadalete
+//   • Mediterráneo: Ebro, Ter, Fluvià, Llobregat, Besós, Turia, Júcar, Segura,
+//                   Guadalhorce, Andarax, Guadalfeo
+//
+//  Tributary rivers (afluentes, flow into another river):
+//   • → Miño:         Sil, Avia, Arnoia, Tea
+//   • → Duero:        Pisuerga, Esla, Adaja, Tormes, Valderaduey, Cega, Duratón, Riaza, Huebra
+//   • → Tajo:         Jarama, Alberche, Tiétar, Alagón, Almonte, Salor
+//   • → Guadalquivir: Genil, Guadalimar, Jándula, Guadajoz, Corbones, Viar
+//   • → Guadiana:     Zújar, Jabalón, Cigüela, Bullaque
+//   • → Ebro:         Aragón, Gállego, Cinca, Segre, Jalón, Oja, Tirón, Najerilla,
+//                     Iregua, Ega, Martín, Guadalope, Matarraña, Huerva
+//   • Otros:          Narcea (→Nalón), Órbigo/Cea (→Esla), Arlanzón (→Pisuerga),
+//                     Noguera Pallaresa/Ribagorzana (→Segre), Arga (→Aragón),
+//                     Henares/Manzanares/Guadarrama (→Jarama),
+//                     Cabriel/Magro (→Júcar), Mundo (→Segura)
+// ─────────────────────────────────────────
+
+const RIOS_CANTABRICO   = ['Bidasoa','Oria','Urola','Deba','Nervión','Navia','Nalón','Sella','Pas','Nansa','Eo'];
+const RIOS_ATLANTICO    = ['Miño','Duero','Tajo','Guadiana','Guadalquivir','Odiel','Tinto','Guadalete'];
+const RIOS_MEDITERRANEO = ['Ebro','Ter','Fluvià','Llobregat','Besós','Turia','Júcar','Segura','Guadalhorce','Andarax','Guadalfeo'];
+
+const TRIB_MIÑO         = ['Sil','Avia','Arnoia','Tea'];
+const TRIB_DUERO        = ['Pisuerga','Esla','Adaja','Tormes','Valderaduey','Cega','Duratón','Riaza','Huebra'];
+const TRIB_TAJO         = ['Jarama','Alberche','Tiétar','Alagón','Almonte','Salor'];
+const TRIB_GUADALQUIVIR = ['Genil','Guadalimar','Jándula','Guadajoz','Corbones','Viar'];
+const TRIB_GUADIANA     = ['Zújar','Jabalón','Cigüela','Bullaque'];
+const TRIB_EBRO         = ['Aragón','Gállego','Cinca','Segre','Jalón','Oja','Tirón','Najerilla','Iregua','Ega','Martín','Guadalope','Matarraña','Huerva'];
+const TRIB_OTROS        = ['Narcea','Órbigo','Cea','Arlanzón','Noguera Pallaresa','Noguera Ribagorzana','Arga','Henares','Manzanares','Guadarrama','Cabriel','Magro','Mundo'];
+
+const RIOS_AL_MAR     = [...RIOS_CANTABRICO, ...RIOS_ATLANTICO, ...RIOS_MEDITERRANEO];
+const RIOS_NO_MED     = [...RIOS_CANTABRICO, ...RIOS_ATLANTICO];
+const ALL_TRIBUTARIES = [...TRIB_MIÑO, ...TRIB_DUERO, ...TRIB_TAJO, ...TRIB_GUADALQUIVIR, ...TRIB_GUADIANA, ...TRIB_EBRO, ...TRIB_OTROS];
+
+// 1. Rivers that reach the sea directly (non-tributaries)
+const riverToSeaTopic = listTopic({
+  id:        'rios-al-mar',
+  label:     'Ríos al Mar',
+  icon:      '🌊',
+  challenge: '🌊  ¡Come los ríos que desembocan en el mar!',
+  correct:   RIOS_AL_MAR,
+  incorrect: ALL_TRIBUTARIES,
+});
+
+// 2. Tributary rivers (afluentes of another river)
+const riverTributaryTopic = listTopic({
+  id:        'rios-tributarios',
+  label:     'Ríos Tributarios',
+  icon:      '🏞️',
+  challenge: '🏞️  ¡Come los ríos que son afluentes de otro río!',
+  correct:   ALL_TRIBUTARIES,
+  incorrect: RIOS_AL_MAR,
+});
+
+// 3. Mediterranean rivers
+const riverMedTopic = listTopic({
+  id:        'rios-mediterraneo',
+  label:     'Mediterráneo',
+  icon:      '🏖️',
+  challenge: '🏖️  ¡Come los ríos que desembocan en el Mediterráneo!',
+  correct:   RIOS_MEDITERRANEO,
+  incorrect: RIOS_NO_MED,
+});
+
+// 4. Atlantic + Cantabrian rivers (non-Mediterranean)
+const riverNoMedTopic = listTopic({
+  id:        'rios-atlantico-cantabrico',
+  label:     'Atlántico / Cantábrico',
+  icon:      '🌅',
+  challenge: '🌅  ¡Come los ríos del Atlántico o del Cantábrico!',
+  correct:   RIOS_NO_MED,
+  incorrect: RIOS_MEDITERRANEO,
+});
+
+// 5. Tributaries of the Ebro
+const ebroTribTopic = listTopic({
+  id:        'trib-ebro',
+  label:     'Afluentes del Ebro',
+  icon:      '🏔️',
+  challenge: '🏔️  ¡Come los afluentes del Ebro!',
+  correct:   TRIB_EBRO,
+  incorrect: [...TRIB_DUERO, ...TRIB_TAJO, ...TRIB_GUADALQUIVIR, ...TRIB_GUADIANA, ...TRIB_MIÑO, ...TRIB_OTROS, ...RIOS_AL_MAR],
+});
+
+// 6. Tributaries of the Duero
+const dueroTribTopic = listTopic({
+  id:        'trib-duero',
+  label:     'Afluentes del Duero',
+  icon:      '🏰',
+  challenge: '🏰  ¡Come los afluentes del Duero!',
+  correct:   TRIB_DUERO,
+  incorrect: [...TRIB_EBRO, ...TRIB_TAJO, ...TRIB_GUADALQUIVIR, ...TRIB_GUADIANA, ...TRIB_MIÑO, ...TRIB_OTROS, ...RIOS_AL_MAR],
+});
+
+// 7. Tributaries of the Tajo
+const tajoTribTopic = listTopic({
+  id:        'trib-tajo',
+  label:     'Afluentes del Tajo',
+  icon:      '🏯',
+  challenge: '🏯  ¡Come los afluentes del Tajo!',
+  correct:   TRIB_TAJO,
+  incorrect: [...TRIB_EBRO, ...TRIB_DUERO, ...TRIB_GUADALQUIVIR, ...TRIB_GUADIANA, ...TRIB_MIÑO, ...TRIB_OTROS, ...RIOS_AL_MAR],
+});
+
+// ─────────────────────────────────────────
 //  CATEGORY & TOPIC REGISTRY
 // ─────────────────────────────────────────
 
@@ -501,7 +610,7 @@ const CATEGORIES = [
 const TOPICS_BY_CAT = {
   'simple-math':    [2,3,4,5,6,7,8,9].map(n => multiplesTopic(n, n * 10)),
   'difficult-math': [2,3,4,5,6,7,8,9].map(n => multiplesTopic(n, n * 20)),
-  'geo':            [coastalTopic],
+  'geo':            [coastalTopic, riverToSeaTopic, riverTributaryTopic, riverMedTopic, riverNoMedTopic, ebroTribTopic, dueroTribTopic, tajoTribTopic],
   'tv':             [gilmoreGirlsTopic, simpsonsTopic],
   'lang':           [regularVerbsTopic, irregularVerbsTopic],
 };
