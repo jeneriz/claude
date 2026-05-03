@@ -2,7 +2,7 @@ name: Deploy Muncher to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "claude/history-timeline-game-6MLNf"]
   workflow_dispatch:
 
 permissions:
@@ -30,8 +30,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Deploy the muncher/ folder as the site root
-          path: './muncher'
+          # Deploy the repo root so all games are accessible
+          path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
