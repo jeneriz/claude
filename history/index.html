@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Timeline!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(160deg, #fef3c7 0%, #dbeafe 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 12px 30px;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2rem;
+      color: #92400e;
+      text-shadow: 3px 3px 0 #fde68a;
+      margin-bottom: 4px;
+    }
+
+    #subtitle {
+      font-size: 0.85rem;
+      color: #78350f;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    /* ── TOP BAR ── */
+    #topbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    select, button {
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 7px 14px;
+      border-radius: 14px;
+      border: 3px solid #d97706;
+      background: white;
+      color: #78350f;
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus, button:focus { border-color: #b45309; }
+
+    button.primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      border-color: #b45309;
+    }
+    button.primary:active { filter: brightness(0.92); }
+
+    /* ── ARENA ── */
+    #arena {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* ── NUMBER TOKENS ── */
+    #token-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      min-width: 52px;
+      padding-top: 4px;
+    }
+
+    .token {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+      transition: transform 0.12s, opacity 0.12s;
+      touch-action: none;
+      border: 3px solid #b45309;
+    }
+    .token:active { cursor: grabbing; }
+    .token.used { opacity: 0.25; pointer-events: none; }
+    .token.dragging { opacity: 0.4; transform: scale(0.9); }
+    .token.floating {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      cursor: grabbing;
+    }
+
+    /* ── EVENT CARDS ── */
+    #cards-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .card {
+      background: white;
+      border: 3px solid #fcd34d;
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 64px;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+      position: relative;
+    }
+    .card.drag-over {
+      border-color: #f59e0b;
+      background: #fffbeb;
+      transform: scale(1.02);
+    }
+    .card.correct {
+      border-color: #34d399;
+      background: #ecfdf5;
+    }
+    .card.wrong {
+      border-color: #f87171;
+      background: #fef2f2;
+      animation: shake 0.45s ease;
+    }
+
+    .card-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 2px solid #b45309;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    .card-badge.empty {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+      box-shadow: none;
+    }
+
+    .card-text {
+      flex: 1;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #1c1917;
+      line-height: 1.3;
+    }
+
+    .card-year {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #6b7280;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .card-year.revealed { opacity: 1; }
+
+    /* ── FEEDBACK BANNER ── */
+    #feedback {
+      margin-top: 16px;
+      width: 100%;
+      max-width: 560px;
+      min-height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.2rem;
+      padding: 10px 18px;
+      text-align: center;
+      transition: background 0.3s;
+      visibility: hidden;
+    }
+    #feedback.show { visibility: visible; }
+    #feedback.win  { background: #d1fae5; color: #065f46; }
+    #feedback.lose { background: #fee2e2; color: #7f1d1d; }
+    #feedback.partial { background: #fef3c7; color: #78350f; }
+
+    /* ── CHECK BUTTON ── */
+    #check-btn {
+      margin-top: 14px;
+      font-size: 1rem;
+      padding: 10px 28px;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      15%       { transform: translateX(-7px); }
+      35%       { transform: translateX(7px); }
+      55%       { transform: translateX(-5px); }
+      75%       { transform: translateX(5px); }
+    }
+
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Timeline!</h1>
+  <div id="subtitle">Sort events from oldest to most recent</div>
+
+  <div id="topbar">
+    <select id="level-select"></select>
+    <button class="primary" onclick="newLevel()">New Level</button>
+  </div>
+
+  <div id="arena">
+    <div id="token-column"></div>
+    <div id="cards-column"></div>
+  </div>
+
+  <div id="feedback"></div>
+  <button class="primary" id="check-btn" onclick="checkAnswer()" style="display:none">Check Order</button>
+
+<script>
+// ── DATASET v1 ──────────────────────────────────────────────────────────────
+const DATASET_VERSION = 1;
+
+// Each event: id, year (negative = BC), title, tags[]
+const EVENTS = [
+  // Ancient
+  { id:  1, year: -3100, title: "Unification of Upper and Lower Egypt",         tags: ["egypt","ancient","africa"] },
+  { id:  2, year: -2560, title: "Great Pyramid of Giza completed",              tags: ["egypt","ancient","africa"] },
+  { id:  3, year: -776,  title: "First Olympic Games in Greece",                tags: ["greece","ancient","europe"] },
+  { id:  4, year: -753,  title: "Legendary founding of Rome",                   tags: ["rome","ancient","europe"] },
+  { id:  5, year: -490,  title: "Battle of Marathon",                           tags: ["greece","ancient","europe","war"] },
+  { id:  6, year: -356,  title: "Alexander the Great born",                     tags: ["greece","ancient","europe"] },
+  { id:  7, year: -323,  title: "Death of Alexander the Great",                 tags: ["greece","ancient","middle-east"] },
+  { id:  8, year: -44,   title: "Julius Caesar assassinated",                   tags: ["rome","ancient","europe"] },
+  { id:  9, year:  79,   title: "Eruption of Vesuvius, Pompeii buried",         tags: ["rome","ancient","europe"] },
+  { id: 10, year:  313,  title: "Edict of Milan — Christianity tolerated",      tags: ["rome","ancient","europe","religion"] },
+  // Medieval
+  { id: 11, year:  476,  title: "Fall of the Western Roman Empire",             tags: ["rome","medieval","europe"] },
+  { id: 12, year:  622,  title: "Muhammad's Hijra — Islamic calendar begins",   tags: ["islam","medieval","middle-east","religion"] },
+  { id: 13, year:  732,  title: "Battle of Tours — Frankish victory over Umayyads", tags: ["france","medieval","europe","war","islam"] },
+  { id: 14, year:  800,  title: "Charlemagne crowned Emperor of the Romans",    tags: ["france","medieval","europe"] },
+  { id: 15, year: 1066,  title: "Norman Conquest of England",                   tags: ["england","medieval","europe","war","france"] },
+  { id: 16, year: 1095,  title: "Pope Urban II calls First Crusade",            tags: ["medieval","europe","middle-east","religion","war"] },
+  { id: 17, year: 1215,  title: "Magna Carta signed",                           tags: ["england","medieval","europe"] },
+  { id: 18, year: 1271,  title: "Marco Polo begins his journey to China",       tags: ["medieval","europe","asia"] },
+  { id: 19, year: 1347,  title: "Black Death reaches Europe",                   tags: ["medieval","europe","disease"] },
+  { id: 20, year: 1389,  title: "Battle of Kosovo",                             tags: ["medieval","europe","balkans","war"] },
+  // Late Medieval / Early Modern
+  { id: 21, year: 1431,  title: "Joan of Arc burned at the stake",              tags: ["france","medieval","europe","war"] },
+  { id: 22, year: 1453,  title: "Fall of Constantinople — end of Byzantine Empire", tags: ["medieval","europe","middle-east","ottoman","war"] },
+  { id: 23, year: 1455,  title: "Gutenberg prints the Bible",                   tags: ["medieval","europe","science"] },
+  { id: 24, year: 1478,  title: "Spanish Inquisition established",              tags: ["spain","early-modern","europe","religion"] },
+  { id: 25, year: 1492,  title: "Columbus reaches the Americas",                tags: ["spain","early-modern","europe","americas","discovery"] },
+  { id: 26, year: 1492,  title: "Conquest of Granada — end of Reconquista",     tags: ["spain","early-modern","europe","war","islam"] },
+  { id: 27, year: 1517,  title: "Luther posts his 95 Theses",                   tags: ["germany","early-modern","europe","religion"] },
+  { id: 28, year: 1519,  title: "Magellan begins circumnavigation of the globe",tags: ["spain","early-modern","europe","discovery"] },
+  { id: 29, year: 1533,  title: "Spanish conquest of the Inca Empire",          tags: ["spain","early-modern","americas","war"] },
+  { id: 30, year: 1543,  title: "Copernicus publishes heliocentric theory",     tags: ["early-modern","europe","science"] },
+  // Modern
+  { id: 31, year: 1588,  title: "Spanish Armada defeated",                      tags: ["spain","england","early-modern","europe","war"] },
+  { id: 32, year: 1687,  title: "Newton publishes Principia Mathematica",       tags: ["england","early-modern","europe","science"] },
+  { id: 33, year: 1776,  title: "American Declaration of Independence",         tags: ["americas","modern","war","politics"] },
+  { id: 34, year: 1789,  title: "French Revolution begins",                     tags: ["france","modern","europe","politics"] },
+  { id: 35, year: 1804,  title: "Napoleon crowned Emperor of France",           tags: ["france","modern","europe"] },
+  { id: 36, year: 1815,  title: "Battle of Waterloo",                           tags: ["france","england","modern","europe","war"] },
+  { id: 37, year: 1848,  title: "Year of Revolutions across Europe",            tags: ["modern","europe","politics"] },
+  { id: 38, year: 1865,  title: "End of the American Civil War",                tags: ["americas","modern","war"] },
+  { id: 39, year: 1869,  title: "Suez Canal opens",                             tags: ["modern","africa","middle-east"] },
+  { id: 40, year: 1903,  title: "Wright Brothers' first powered flight",        tags: ["americas","modern","science"] },
+  { id: 41, year: 1914,  title: "World War I begins",                           tags: ["modern","europe","war"] },
+  { id: 42, year: 1917,  title: "Russian Revolution",                           tags: ["modern","europe","russia","politics"] },
+  { id: 43, year: 1939,  title: "World War II begins",                          tags: ["modern","europe","war"] },
+  { id: 44, year: 1945,  title: "Atomic bomb dropped on Hiroshima",             tags: ["modern","asia","war","science"] },
+  { id: 45, year: 1969,  title: "Moon landing — Apollo 11",                     tags: ["americas","modern","science"] },
+];
+
+// ── LEVEL RECIPES ────────────────────────────────────────────────────────────
+const RECIPES = [
+  { id: "ancient-easy",     label: "Ancient World",          tags: ["ancient"],                 count: 5, minGap: 200 },
+  { id: "ancient-hard",     label: "Ancient World (hard)",   tags: ["ancient"],                 count: 5, minGap:  30 },
+  { id: "medieval-europe",  label: "Medieval Europe",        tags: ["medieval","europe"],       count: 5, minGap:  20 },
+  { id: "france",           label: "France through the ages",tags: ["france"],                  count: 5, minGap:  50 },
+  { id: "spain-1492",       label: "Same Year! (1492)",      ids: [24,25,26,28],                count: 4 },
+  { id: "discovery",        label: "Age of Discovery",       tags: ["discovery","early-modern"],count: 5, minGap:   5 },
+  { id: "wars",             label: "Great Wars of Europe",   tags: ["war","modern","europe"],   count: 5, minGap:   5 },
+  { id: "science",          label: "Science milestones",     tags: ["science"],                 count: 5, minGap:  20 },
+  { id: "all-easy",         label: "World History (easy)",   tags: [],                          count: 5, minGap: 400 },
+  { id: "all-hard",         label: "World History (hard)",   tags: [],                          count: 6, minGap:  20 },
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let currentEvents = [];   // shuffled event objects for this round
+let assignments = {};     // cardId -> token number assigned
+
+// ── SEEDED RNG (mulberry32) ──────────────────────────────────────────────────
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle(arr, rng) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── LEVEL GENERATION ─────────────────────────────────────────────────────────
+function pickEvents(recipe, seed) {
+  const rng = mulberry32(seed);
+
+  // Fixed curated set by ID
+  if (recipe.ids) {
+    const pool = recipe.ids.map(id => EVENTS.find(e => e.id === id)).filter(Boolean);
+    return seededShuffle(pool, rng);
+  }
+
+  // Filter by tags
+  let pool = recipe.tags && recipe.tags.length
+    ? EVENTS.filter(e => recipe.tags.every(t => e.tags.includes(t)))
+    : [...EVENTS];
+
+  // Apply minGap: greedily pick events ensuring min year gap between adjacent chosen events
+  const sorted = [...pool].sort((a, b) => a.year - b.year);
+  const minGap = recipe.minGap || 0;
+  const count = recipe.count || 5;
+
+  // Try up to 40 seeded random picks to find a valid set
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const shuffled = seededShuffle(sorted, rng);
+    const picked = [shuffled[0]];
+    for (const e of shuffled.slice(1)) {
+      const lastYear = picked[picked.length - 1].year;
+      if (Math.abs(e.year - lastYear) >= minGap || recipe.minGap === 0) {
+        picked.push(e);
+        if (picked.length === count) break;
+      }
+    }
+    if (picked.length === count) return seededShuffle(picked, rng);
+  }
+
+  // Fallback: just take first N from sorted pool
+  return seededShuffle(sorted.slice(0, count), rng);
+}
+
+// ── UI POPULATION ─────────────────────────────────────────────────────────────
+function buildLevelSelect() {
+  const sel = document.getElementById('level-select');
+  sel.innerHTML = '';
+  RECIPES.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.label;
+    sel.appendChild(opt);
+  });
+}
+
+function newLevel() {
+  const recipeId = document.getElementById('level-select').value;
+  const recipe = RECIPES.find(r => r.id === recipeId);
+  const seed = Date.now() & 0xFFFFFF;
+  currentEvents = pickEvents(recipe, seed);
+  assignments = {};
+  render();
+}
+
+function render() {
+  renderTokens();
+  renderCards();
+  hideFeedback();
+  document.getElementById('check-btn').style.display = 'inline-block';
+}
+
+function renderTokens() {
+  const col = document.getElementById('token-column');
+  col.innerHTML = '';
+  for (let i = 1; i <= currentEvents.length; i++) {
+    const tok = document.createElement('div');
+    tok.className = 'token';
+    tok.textContent = i;
+    tok.dataset.num = i;
+    setupTokenDrag(tok);
+    col.appendChild(tok);
+  }
+  syncTokenUsed();
+}
+
+function renderCards() {
+  const col = document.getElementById('cards-column');
+  col.innerHTML = '';
+  currentEvents.forEach((evt, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.idx = idx;
+
+    const badge = document.createElement('div');
+    badge.className = 'card-badge empty';
+    badge.id = `badge-${idx}`;
+
+    const text = document.createElement('div');
+    text.className = 'card-text';
+    text.textContent = evt.title;
+
+    const year = document.createElement('div');
+    year.className = 'card-year';
+    year.id = `year-${idx}`;
+    year.textContent = formatYear(evt.year);
+
+    card.appendChild(badge);
+    card.appendChild(text);
+    card.appendChild(year);
+
+    setupCardDrop(card, idx);
+    col.appendChild(card);
+  });
+}
+
+function formatYear(y) {
+  return y < 0 ? `${Math.abs(y)} BC` : `${y} AD`;
+}
+
+// ── DRAG & DROP (mouse + touch) ───────────────────────────────────────────────
+let dragState = null; // { num, ghost, originTok }
+
+function setupTokenDrag(tok) {
+  tok.addEventListener('mousedown', e => startDrag(e, tok, e.clientX, e.clientY));
+  tok.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startDrag(e, tok, t.clientX, t.clientY);
+  }, { passive: false });
+}
+
+function startDrag(e, tok, x, y) {
+  if (tok.classList.contains('used')) return;
+  e.preventDefault();
+  const num = +tok.dataset.num;
+
+  // Remove previous assignment if re-dragging a used token
+  // (tokens become used, so this path is only for fresh tokens)
+
+  const ghost = document.createElement('div');
+  ghost.className = 'token floating';
+  ghost.textContent = num;
+  ghost.style.width = '48px';
+  ghost.style.height = '48px';
+  ghost.style.left = (x - 24) + 'px';
+  ghost.style.top  = (y - 24) + 'px';
+  document.body.appendChild(ghost);
+
+  tok.classList.add('dragging');
+  dragState = { num, ghost, originTok: tok };
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragEnd);
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend',  onTouchEnd);
+}
+
+function onDragMove(e) { moveGhost(e.clientX, e.clientY); }
+function onTouchMove(e) {
+  e.preventDefault();
+  const t = e.touches[0];
+  moveGhost(t.clientX, t.clientY);
+  highlightCardUnder(t.clientX, t.clientY);
+}
+
+function moveGhost(x, y) {
+  if (!dragState) return;
+  dragState.ghost.style.left = (x - 24) + 'px';
+  dragState.ghost.style.top  = (y - 24) + 'px';
+  highlightCardUnder(x, y);
+}
+
+function highlightCardUnder(x, y) {
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+  const card = cardAt(x, y);
+  if (card) card.classList.add('drag-over');
+}
+
+function cardAt(x, y) {
+  const els = document.elementsFromPoint(x, y);
+  return els.find(el => el.classList && el.classList.contains('card')) || null;
+}
+
+function onDragEnd(e) { finishDrag(e.clientX, e.clientY); }
+function onTouchEnd(e) {
+  const t = e.changedTouches[0];
+  finishDrag(t.clientX, t.clientY);
+}
+
+function finishDrag(x, y) {
+  if (!dragState) return;
+  const { num, ghost, originTok } = dragState;
+  dragState = null;
+
+  ghost.remove();
+  originTok.classList.remove('dragging');
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend',  onTouchEnd);
+
+  const card = cardAt(x, y);
+  if (!card) return;
+
+  const idx = +card.dataset.idx;
+
+  // If this card already has an assignment, free the old token
+  const oldNum = assignments[idx];
+  if (oldNum !== undefined) freeToken(oldNum);
+
+  // If another card had this number, free it there too
+  for (const [k, v] of Object.entries(assignments)) {
+    if (v === num && +k !== idx) { delete assignments[+k]; updateBadge(+k); }
+  }
+
+  assignments[idx] = num;
+  updateBadge(idx);
+  syncTokenUsed();
+  hideFeedback();
+}
+
+function freeToken(num) {
+  for (const [k, v] of Object.entries(assignments)) {
+    if (v === num) { delete assignments[+k]; updateBadge(+k); }
+  }
+}
+
+function updateBadge(idx) {
+  const badge = document.getElementById(`badge-${idx}`);
+  if (!badge) return;
+  const num = assignments[idx];
+  if (num !== undefined) {
+    badge.textContent = num;
+    badge.classList.remove('empty');
+  } else {
+    badge.textContent = '';
+    badge.classList.add('empty');
+  }
+}
+
+function syncTokenUsed() {
+  const usedNums = new Set(Object.values(assignments));
+  document.querySelectorAll('.token').forEach(tok => {
+    if (usedNums.has(+tok.dataset.num)) tok.classList.add('used');
+    else tok.classList.remove('used');
+  });
+}
+
+// ── ANSWER CHECK ─────────────────────────────────────────────────────────────
+function checkAnswer() {
+  if (Object.keys(assignments).length < currentEvents.length) {
+    showFeedback('Assign all numbers first!', 'partial');
+    return;
+  }
+
+  // Build user's ordering: cardIdx -> rank
+  // Correct order: sort events by year ascending → position 1,2,3...
+  const sortedByYear = [...currentEvents]
+    .map((e, i) => ({ ...e, originalIdx: i }))
+    .sort((a, b) => a.year - b.year);
+
+  let correct = 0;
+  currentEvents.forEach((evt, idx) => {
+    const userRank = assignments[idx];
+    const correctRank = sortedByYear.findIndex(e => e.originalIdx === idx) + 1;
+    const card = document.querySelector(`.card[data-idx="${idx}"]`);
+    card.classList.remove('correct', 'wrong');
+    if (userRank === correctRank) {
+      correct++;
+      card.classList.add('correct');
+    } else {
+      card.classList.add('wrong');
+    }
+    // Reveal year
+    const yearEl = document.getElementById(`year-${idx}`);
+    if (yearEl) yearEl.classList.add('revealed');
+  });
+
+  const total = currentEvents.length;
+  if (correct === total) {
+    showFeedback('Perfect! You nailed the timeline!', 'win');
+    document.getElementById('check-btn').style.display = 'none';
+  } else if (correct >= Math.ceil(total / 2)) {
+    showFeedback(`${correct} / ${total} correct — close!`, 'partial');
+  } else {
+    showFeedback(`${correct} / ${total} correct — try again!`, 'lose');
+  }
+}
+
+function showFeedback(msg, type) {
+  const el = document.getElementById('feedback');
+  el.className = `show ${type}`;
+  el.textContent = msg;
+}
+
+function hideFeedback() {
+  document.getElementById('feedback').className = '';
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('correct', 'wrong'));
+  document.querySelectorAll('.card-year').forEach(y => y.classList.remove('revealed'));
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+buildLevelSelect();
+newLevel();
+</script>
+</body>
+</html>
