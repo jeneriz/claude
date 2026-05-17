@@ -142,6 +142,15 @@
       animation: shake 0.45s ease;
     }
 
+    .cell.debug-valid {
+      background: #dcfce7 !important;
+      border-color: #4ade80 !important;
+    }
+    .cell.debug-invalid {
+      background: #fee2e2 !important;
+      border-color: #f87171 !important;
+    }
+
     .cell.correct-pop {
       animation: pop 0.22s ease;
     }
@@ -671,7 +680,8 @@ let G = {
   nCorrect:  N_CORRECT, // actual correct cells this board (may vary by topic)
   gameOver:  false,
   locked:    false, // true during wrong-eat animation
-  lastClick: { row: -1, col: -1, t: 0 }, // double-click/tap tracking (shared)
+  lastClick: { row: -1, col: -1, t: 0, count: 0 }, // tap tracking (shared)
+  debugMode: false,
 };
 
 // ─────────────────────────────────────────
@@ -688,10 +698,11 @@ function generateBoard() {
     row:       (i / COLS) | 0,
     col:       i % COLS,
   }));
-  G.nCorrect = G.grid.filter(c => c.isCorrect).length;
-  G.mRow  = 0;
-  G.mCol  = 0;
-  G.eaten = 0;
+  G.nCorrect  = G.grid.filter(c => c.isCorrect).length;
+  G.mRow      = 0;
+  G.mCol      = 0;
+  G.eaten     = 0;
+  G.debugMode = false;
 }
 
 // ─────────────────────────────────────────
@@ -745,6 +756,10 @@ function renderGrid() {
     const div    = makeEl('div', 'cell');
     div.dataset.idx = idx;
 
+    if (G.debugMode && !cell.eaten) {
+      div.classList.add(cell.isCorrect ? 'debug-valid' : 'debug-invalid');
+    }
+
     const isHere = (cell.row === G.mRow && cell.col === G.mCol);
 
     if (cell.eaten) {
@@ -785,15 +800,7 @@ function renderGrid() {
     // preventDefault stops synthesised mouse events so we don't double-fire.
     div.addEventListener('touchend', (e) => {
       e.preventDefault();
-      const now = Date.now();
-      const { row: lr, col: lc, t: lt } = G.lastClick;
-      if (lr === cell.row && lc === cell.col && now - lt < 400) {
-        G.lastClick = { row: -1, col: -1, t: 0 };
-        handleEat(cell.row, cell.col);
-      } else {
-        G.lastClick = { row: cell.row, col: cell.col, t: now };
-        handleMove(cell.row, cell.col);
-      }
+      handleTap(cell.row, cell.col);
     });
 
     $grid.appendChild(div);
@@ -811,20 +818,42 @@ function render() {
 //  ACTIONS
 // ─────────────────────────────────────────
 
-// handleClick: detects double-click by timing; single click = move, double = eat
-function handleClick(row, col) {
+// handleTap: single=move, double=eat, triple on eaten cell=toggle debug mode
+function handleTap(row, col) {
   if (G.gameOver || G.locked) return;
   const now = Date.now();
-  const { row: lr, col: lc, t: lt } = G.lastClick;
+  const { row: lr, col: lc, t: lt, count: lcount } = G.lastClick;
+
   if (lr === row && lc === col && now - lt < 400) {
-    // Second click on same cell within 400 ms → eat
-    G.lastClick = { row: -1, col: -1, t: 0 };
-    handleEat(row, col);
+    const newCount = lcount + 1;
+    if (newCount === 2) {
+      const cell = G.grid[cellIdx(row, col)];
+      if (!cell.eaten) {
+        G.lastClick = { row: -1, col: -1, t: 0, count: 0 };
+        handleEat(row, col);
+      } else {
+        // Already eaten — keep counting toward triple-tap
+        G.lastClick = { row, col, t: now, count: newCount };
+      }
+    } else if (newCount >= 3) {
+      G.lastClick = { row: -1, col: -1, t: 0, count: 0 };
+      const cell = G.grid[cellIdx(row, col)];
+      if (cell.eaten) {
+        G.debugMode = !G.debugMode;
+        renderGrid();
+      }
+    } else {
+      G.lastClick = { row, col, t: now, count: newCount };
+    }
     return;
   }
-  // First click → move
-  G.lastClick = { row, col, t: now };
+
+  G.lastClick = { row, col, t: now, count: 1 };
   handleMove(row, col);
+}
+
+function handleClick(row, col) {
+  handleTap(row, col);
 }
 
 function handleMove(row, col) {
@@ -936,7 +965,7 @@ function resetGame() {
   G.level     = 1;
   G.gameOver  = false;
   G.locked    = false;
-  G.lastClick = { row: -1, col: -1, t: 0 };
+  G.lastClick = { row: -1, col: -1, t: 0, count: 0 };
   generateBoard();
   render();
 }
