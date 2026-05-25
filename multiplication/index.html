@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Times Tables</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #6d28d9;
+      --purple-light: #ede9fe;
+      --purple-dark: #4c1d95;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --yellow: #d97706;
+      --yellow-light: #fef3c7;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(160deg, #fef9c3 0%, #ede9fe 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 32px;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--purple);
+      text-shadow: 3px 3px 0 #ddd6fe;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    /* ── STATS BAR ── */
+    #stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--purple-dark);
+      margin-bottom: 20px;
+    }
+    #stats span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    #stats .label { font-size: 0.7rem; font-weight: 600; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
+    #stats .value { font-size: 1.1rem; }
+
+    /* ── QUESTION CARD ── */
+    #card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 40px;
+      box-shadow: 0 8px 32px rgba(109,40,217,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+      max-width: 380px;
+      margin-bottom: 20px;
+      transition: transform 0.12s ease;
+    }
+
+    #question {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: var(--purple-dark);
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    #answer-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #answer {
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--purple);
+      width: 3.5ch;
+      text-align: center;
+      border: none;
+      border-bottom: 4px solid var(--purple);
+      background: transparent;
+      outline: none;
+      padding: 4px 8px;
+      font-family: inherit;
+      caret-color: var(--purple);
+      -moz-appearance: textfield;
+    }
+    #answer::-webkit-outer-spin-button,
+    #answer::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    #submit-btn {
+      font-size: 1.5rem;
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(109,40,217,0.3);
+      transition: transform 0.1s, box-shadow 0.1s;
+      flex-shrink: 0;
+    }
+    #submit-btn:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(109,40,217,0.4); }
+    #submit-btn:active { transform: scale(0.95); }
+
+    /* ── FEEDBACK ── */
+    #feedback {
+      font-size: 1.1rem;
+      font-weight: 800;
+      min-height: 1.6em;
+      text-align: center;
+      padding: 8px 20px;
+      border-radius: 12px;
+      transition: opacity 0.3s;
+      opacity: 0;
+    }
+    #feedback.show { opacity: 1; }
+    #feedback.correct { color: var(--green); background: var(--green-light); }
+    #feedback.wrong { color: var(--red); background: var(--red-light); }
+
+    /* ── PROGRESS GRID ── */
+    #progress-section {
+      width: 100%;
+      max-width: 420px;
+    }
+    #progress-section h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--purple-dark);
+      opacity: 0.7;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 3px;
+    }
+    .cell {
+      aspect-ratio: 1;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+      transition: background 0.3s, transform 0.15s;
+      cursor: default;
+    }
+    .cell.unseen { background: #e5e7eb; color: #9ca3af; }
+    .cell.struggling { background: #fca5a5; color: #7f1d1d; }
+    .cell.learning { background: #fde68a; color: #78350f; }
+    .cell.good { background: #6ee7b7; color: #064e3b; }
+    .cell.mastered { background: #6d28d9; color: white; }
+    .cell:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      background: #1f2937;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      pointer-events: none;
+      transform: translateY(-130%);
+      z-index: 10;
+    }
+    .cell { position: relative; }
+
+    /* ── LEGEND ── */
+    #legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #4b5563;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* ── SHAKE ANIMATION ── */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    #card.shake { animation: shake 0.35s ease; }
+
+    /* ── POP ANIMATION ── */
+    @keyframes pop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    #card.pop { animation: pop 0.25s ease; }
+
+    /* ── SESSION COMPLETE OVERLAY ── */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(109,40,217,0.85);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #overlay.show { display: flex; }
+    #overlay-box {
+      background: white;
+      border-radius: 28px;
+      padding: 40px 36px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    #overlay-box h2 { font-size: 2rem; color: var(--purple); margin-bottom: 8px; }
+    #overlay-box p { font-size: 1rem; color: #4b5563; margin-bottom: 24px; line-height: 1.5; }
+    #restart-btn {
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 32px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 4px 16px rgba(109,40,217,0.3);
+      transition: transform 0.1s;
+    }
+    #restart-btn:hover { transform: scale(1.04); }
+  </style>
+</head>
+<body>
+
+<h1>Times Tables</h1>
+
+<div id="stats">
+  <span><span class="label">Streak</span><span class="value" id="streak-val">0</span></span>
+  <span><span class="label">Correct</span><span class="value" id="correct-val">0</span></span>
+  <span><span class="label">Total</span><span class="value" id="total-val">0</span></span>
+</div>
+
+<div id="card">
+  <div id="question">? × ? = ?</div>
+  <div id="answer-row">
+    <input id="answer" type="number" min="0" max="99" inputmode="numeric" autocomplete="off" placeholder="?" autofocus>
+    <button id="submit-btn" aria-label="Submit">→</button>
+  </div>
+  <div id="feedback"></div>
+</div>
+
+<section id="progress-section">
+  <h2>Progress</h2>
+  <div id="grid"></div>
+  <div id="legend">
+    <span class="legend-item"><span class="legend-dot unseen"></span>Unseen</span>
+    <span class="legend-item"><span class="legend-dot struggling"></span>Struggling</span>
+    <span class="legend-item"><span class="legend-dot learning"></span>Learning</span>
+    <span class="legend-item"><span class="legend-dot good"></span>Good</span>
+    <span class="legend-item"><span class="legend-dot mastered"></span>Mastered</span>
+  </div>
+</section>
+
+<div id="overlay">
+  <div id="overlay-box">
+    <h2>All mastered! 🎉</h2>
+    <p id="overlay-msg">You've mastered all 81 multiplication facts. Keep practicing to stay sharp!</p>
+    <button id="restart-btn">Play Again</button>
+  </div>
+</div>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+
+  // Each fact: { a, b, correct, total, weight }
+  // weight drives selection probability (higher = asked more often)
+  // Weights: mastered=1, good=2, learning=3, struggling=8, unseen=3
+
+  const WEIGHT = { unseen: 3, struggling: 8, learning: 3, good: 2, mastered: 1 };
+
+  function level(f) {
+    if (f.total === 0) return 'unseen';
+    const rate = f.correct / f.total;
+    if (rate >= 0.9 && f.total >= 5) return 'mastered';
+    if (rate >= 0.75 && f.total >= 3) return 'good';
+    if (rate >= 0.5) return 'learning';
+    return 'struggling';
+  }
+
+  // Build all 81 facts (1×1 … 9×9)
+  function initFacts() {
+    const facts = [];
+    for (let a = 1; a <= 9; a++) {
+      for (let b = 1; b <= 9; b++) {
+        facts.push({ a, b, correct: 0, total: 0 });
+      }
+    }
+    return facts;
+  }
+
+  let facts = loadFacts();
+  let streak = 0;
+  let totalAnswered = 0;
+  let totalCorrect = 0;
+  let current = null;
+
+  function loadFacts() {
+    try {
+      const saved = localStorage.getItem('multFacts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Validate shape
+        if (Array.isArray(parsed) && parsed.length === 81) return parsed;
+      }
+    } catch (_) {}
+    return initFacts();
+  }
+
+  function saveFacts() {
+    try { localStorage.setItem('multFacts', JSON.stringify(facts)); } catch (_) {}
+  }
+
+  // ── SELECTION ──────────────────────────────────────────────────────────────
+
+  function pickFact() {
+    // Build weighted pool; exclude the just-asked fact if possible
+    const pool = facts.map((f, i) => {
+      const w = WEIGHT[level(f)];
+      return { i, w };
+    });
+
+    // Prefer not repeating the same fact immediately
+    const filtered = current
+      ? pool.filter(p => !(facts[p.i].a === current.a && facts[p.i].b === current.b))
+      : pool;
+
+    const source = filtered.length ? filtered : pool;
+    const total = source.reduce((s, p) => s + p.w, 0);
+    let r = Math.random() * total;
+    for (const { i, w } of source) {
+      r -= w;
+      if (r <= 0) return facts[i];
+    }
+    return facts[source[source.length - 1].i];
+  }
+
+  // ── UI HELPERS ─────────────────────────────────────────────────────────────
+
+  const $question = document.getElementById('question');
+  const $answer   = document.getElementById('answer');
+  const $feedback = document.getElementById('feedback');
+  const $card     = document.getElementById('card');
+  const $grid     = document.getElementById('grid');
+  const $overlay  = document.getElementById('overlay');
+  const $overlayMsg = document.getElementById('overlay-msg');
+
+  function showQuestion() {
+    current = pickFact();
+    // Randomly swap order so both "3×7" and "7×3" appear
+    const [a, b] = Math.random() < 0.5 ? [current.a, current.b] : [current.b, current.a];
+    $question.textContent = `${a} × ${b} = ?`;
+    $answer.value = '';
+    $feedback.className = '';
+    $feedback.textContent = '';
+    $answer.focus();
+  }
+
+  function flashFeedback(msg, cls) {
+    $feedback.textContent = msg;
+    $feedback.className = `show ${cls}`;
+  }
+
+  function animateCard(cls) {
+    $card.classList.remove('shake', 'pop');
+    void $card.offsetWidth; // reflow
+    $card.classList.add(cls);
+    $card.addEventListener('animationend', () => $card.classList.remove(cls), { once: true });
+  }
+
+  function updateStats() {
+    document.getElementById('streak-val').textContent = streak;
+    document.getElementById('correct-val').textContent = totalCorrect;
+    document.getElementById('total-val').textContent = totalAnswered;
+  }
+
+  function renderGrid() {
+    $grid.innerHTML = '';
+    for (let a = 1; a <= 9; a++) {
+      for (let b = 1; b <= 9; b++) {
+        const f = facts.find(x => x.a === a && x.b === b);
+        const lv = level(f);
+        const div = document.createElement('div');
+        div.className = `cell ${lv}`;
+        div.textContent = `${a}×${b}`;
+        const rate = f.total ? Math.round(100 * f.correct / f.total) : '—';
+        div.setAttribute('data-tip', `${a}×${b}=${a*b}  ${rate}${f.total ? '%' : ''} (${f.total})`);
+        $grid.appendChild(div);
+      }
+    }
+  }
+
+  function checkAllMastered() {
+    if (facts.every(f => level(f) === 'mastered')) {
+      const acc = totalAnswered ? Math.round(100 * totalCorrect / totalAnswered) : 0;
+      $overlayMsg.textContent = `You've mastered all 81 multiplication facts with ${acc}% accuracy this session. Keep practicing to stay sharp!`;
+      $overlay.classList.add('show');
+    }
+  }
+
+  // ── SUBMIT ─────────────────────────────────────────────────────────────────
+
+  function submit() {
+    const val = $answer.value.trim();
+    if (val === '') { $answer.focus(); return; }
+    const guess = parseInt(val, 10);
+    if (isNaN(guess)) { $answer.value = ''; $answer.focus(); return; }
+
+    const correct = current.a * current.b;
+    totalAnswered++;
+    current.total++;
+
+    if (guess === correct) {
+      current.correct++;
+      streak++;
+      totalCorrect++;
+      flashFeedback('Correct! ✓', 'correct');
+      animateCard('pop');
+    } else {
+      streak = 0;
+      flashFeedback(`${current.a} × ${current.b} = ${correct}`, 'wrong');
+      animateCard('shake');
+    }
+
+    updateStats();
+    renderGrid();
+    saveFacts();
+
+    setTimeout(() => {
+      checkAllMastered();
+      if (!$overlay.classList.contains('show')) showQuestion();
+    }, guess === correct ? 700 : 1400);
+  }
+
+  // ── EVENTS ─────────────────────────────────────────────────────────────────
+
+  document.getElementById('submit-btn').addEventListener('click', submit);
+
+  $answer.addEventListener('keydown', e => {
+    if (e.key === 'Enter') submit();
+  });
+
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    facts = initFacts();
+    saveFacts();
+    streak = 0;
+    totalAnswered = 0;
+    totalCorrect = 0;
+    $overlay.classList.remove('show');
+    updateStats();
+    renderGrid();
+    showQuestion();
+  });
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+
+  updateStats();
+  renderGrid();
+  showQuestion();
+</script>
+</body>
+</html>
