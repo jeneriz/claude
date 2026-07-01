@@ -2,7 +2,8 @@ name: Deploy games to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    # claude/number-munchers-game-ckgvp is the repository's default branch
+    branches: ["main", "claude/number-munchers-game-ckgvp"]
   workflow_dispatch:
 
 permissions:
@@ -92,6 +93,9 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          # Enable Pages with the Actions source automatically if it isn't yet
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
