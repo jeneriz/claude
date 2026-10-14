@@ -450,7 +450,6 @@ function renderCards() {
     card.appendChild(text);
     card.appendChild(year);
 
-    setupCardDrop(card, idx);
     col.appendChild(card);
   });
 }
@@ -605,10 +604,11 @@ function checkAnswer() {
   let correct = 0;
   currentEvents.forEach((evt, idx) => {
     const userRank = assignments[idx];
-    const correctRank = sortedByYear.findIndex(e => e.originalIdx === idx) + 1;
+    // Events sharing a year (e.g. 1492) may be ranked in either order
+    const rankYear = sortedByYear[userRank - 1].year;
     const card = document.querySelector(`.card[data-idx="${idx}"]`);
     card.classList.remove('correct', 'wrong');
-    if (userRank === correctRank) {
+    if (rankYear === evt.year) {
       correct++;
       card.classList.add('correct');
     } else {
